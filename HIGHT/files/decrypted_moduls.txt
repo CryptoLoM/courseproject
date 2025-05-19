@@ -1,0 +1,143 @@
+package long_arithmetic
+import "fmt"
+
+
+func (ln *BigInt) BarrettReduction(mod *BigInt) *BigInt {
+    modulo := mod
+    mu := ln.Mu(modulo)
+    digitLength := modulo.digitLength()
+
+    if modulo == nil || len(modulo.numberArray) == 0 {
+        panic("Modulo is not initialized correctly")
+    }
+    if mu == nil || len(mu.numberArray) == 0 {
+        panic("Mu is not initialized correctly")
+    }
+
+    if ln.Compare(modulo) < 0 {
+        return ln
+    }
+  
+    Q := ln.LongShiftDigitsToLow(digitLength - 1)
+    fmt.Printf("Q before multiplication: %v\n", Q.numberArray)
+
+
+    // Множимо на mu (попередньо обчислену константу для Барретт-редукції)
+    Q = Q.Multiply(mu)
+    fmt.Printf("Q after multiplication: %v\n", Q.numberArray)
+
+    // Зсуваємо ще на digitLength() + 1, щоб врахувати старші цифри після множення
+    Q = Q.LongShiftDigitsToLow(digitLength + 1)
+    fmt.Println("Q after shift:", Q)
+
+    // Множимо на модуль
+    Q = Q.Multiply(modulo)
+    
+    // Обчислюємо залишок
+    R := ln.Subtract(Q)
+
+    // Якщо залишок R >= модуль, віднімаємо модуль до отримання залишку < модуль
+    if R.Compare(modulo) >= 0 {
+        R = R.Mod(modulo)
+    }
+
+    return R
+}
+
+
+func (*BigInt) Mu(mod *BigInt) *BigInt {
+    digitLength := mod.digitLength() 
+    
+    beta := NewBigIntFromUint32(1)
+    beta = beta.LongShiftDigitsToHigh(digitLength * 2)
+    
+    // mu = beta^2m / n
+    mu := beta.Divide(mod)
+    
+    return mu
+}
+
+
+
+// ModSquare виконує піднесення числа до квадрату за модулем
+func (bn *BigInt) ModSquare(mod *BigInt) *BigInt {
+    // Піднесення до квадрату
+    square := bn.Multiply(bn)
+    
+    // Обчислення залишку за модулем
+    return square.Mod(mod)
+}
+
+
+func (ln *BigInt) LongModPowerBarrett(exp, n *BigInt) *BigInt {
+    result := NewBigIntFromUint32(1) // Початкове значення result = 1
+    base := ln.Mod(n)                // A = ln mod n
+
+
+    // Проходимо по бітах степеня, за винятком останнього
+    for i := exp.digitLength() - 1; i > 0; i-- {
+        // Отримуємо біт на позиції i
+        bit := (exp.numberArray[i/32] >> (i % 32)) & 1
+
+        // Якщо біт дорівнює 1, виконуємо множення
+        if bit == 1 {
+            result = result.Multiply(base).BarrettReduction(n)
+        }
+
+        // Квадратуємо result на кожній ітерації
+        result = result.Multiply(result).BarrettReduction(n)
+    }
+
+    // Окремо обробляємо останній біт (i = 0)
+    if exp.numberArray[0] & 1 == 1 { // Перевіряємо, чи останній біт = 1
+        result = result.Multiply(base).BarrettReduction(n)
+    }
+
+    return result
+}
+
+
+
+// Mod виконує операцію залишку
+func (ln *BigInt) Mod(n *BigInt) *BigInt {
+    // Перший етап: отримуємо частку від ділення
+    quotient := ln.Divide(n)
+
+    // Другий етап: множимо частку на модуль
+    product := quotient.Multiply(n)
+
+    // Третій етап: віднімаємо результат множення від оригінального числа
+    remainder := ln.Subtract(product)
+
+    // Якщо залишок від'ємний, додаємо модуль, щоб отримати додатний залишок
+    if remainder.Compare(zero()) < 0 {
+        remainder = remainder.Add(n)
+    }
+
+    return remainder
+}
+
+
+
+func (ln *BigInt) ModAdd(other, n *BigInt) *BigInt {
+    sum := ln.Add(other)   // Додаємо два числа
+    return sum.Mod(n)      // Знаходимо залишок за модулем n
+}
+
+func (ln *BigInt) ModSubtract(other, n *BigInt) *BigInt {
+    diff := ln.Subtract(other) // Віднімаємо два числа
+    if diff.Compare(NewBigIntFromUint32(0)) < 0 {
+        diff = diff.Add(n)    // Якщо результат від'ємний, додаємо модуль
+    }
+    return diff.Mod(n)       
+}
+
+
+
+func (ln *BigInt) ModMultiply(other, n *BigInt) *BigInt {
+    return ln.BarrettReduction(other)       // Знаходимо залишок за модулем n
+}
+
+
+
+
