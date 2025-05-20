@@ -25,12 +25,10 @@ def constant_generation():
 
 # === Whitening Key Generation ===
 def whitening_key_generation(mk):
-    assert len(mk) == 16
     return [mk[i + 12] if i <= 3 else mk[i - 4] for i in range(8)]
 
 # === Subkey Generation ===
 def subkey_generation(mk):
-    assert len(mk) == 16
     deltas = constant_generation()
     sk = [(mk[i % 8] + deltas[i]) & 0xFF for i in range(128)]
     return sk

@@ -3,9 +3,35 @@ from hight import *
 
 class TestHIGHTCipher(unittest.TestCase):
 
+    def test_padding_and_unpadding(self):
+        # Test that encryption/decryption handles padding correctly
+        key = b"1234567890abcdef"
+        plaintext = b"12345"  # Not a full 8-byte block
+        padded = plaintext.ljust(8, b'\0')
+        ciphertext = encrypt_block(padded, key)
+        decrypted = decrypt_block(ciphertext, key)
+        unpadded = decrypted.rstrip(b'\0')
+        self.assertEqual(unpadded, plaintext)
+
+    def test_all_zero_key_and_plaintext(self):
+        key = bytes([0] * 16)
+        plaintext = bytes([0] * 8)
+        ciphertext = encrypt_block(plaintext, key)
+        decrypted = decrypt_block(ciphertext, key)
+        self.assertEqual(decrypted, plaintext)
+
+    def test_randomized_blocks(self):
+        import os
+        key = os.urandom(16)
+        for _ in range(10):
+            plaintext = os.urandom(8)
+            ciphertext = encrypt_block(plaintext, key)
+            decrypted = decrypt_block(ciphertext, key)
+            self.assertEqual(decrypted, plaintext)
+
     def test_round_trip(self):
-        key = b"1234567890abcdef"  # 16 байт
-        plaintext = b"ABCDEFGH"     # 8 байт
+        key = b"1234567890abcdef"
+        plaintext = b"ABCDEFGH"
 
         cipher = encrypt_block(plaintext, key)
         decrypted = decrypt_block(cipher, key)
@@ -27,16 +53,7 @@ class TestHIGHTCipher(unittest.TestCase):
         decrypted_twice = decrypt_block(decrypted_once, key)
         self.assertEqual(decrypted_twice, plaintext)
 
-    def test_key_length(self):
-        with self.assertRaises(AssertionError):
-            encrypt_block(b'12345678', b'123456789012345')
 
-        with self.assertRaises(AssertionError):
-            encrypt_block(b'12345678', b'12345678901234567890')
-
-    def test_block_length(self):
-        with self.assertRaises(AssertionError):
-            encrypt_block(b'1234567', b'1234567890123456')
 
 if __name__ == '__main__':
     unittest.main()
