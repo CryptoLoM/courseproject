@@ -25,10 +25,12 @@ def constant_generation():
 
 # === Whitening Key Generation ===
 def whitening_key_generation(mk):
+
     return [mk[i + 12] if i <= 3 else mk[i - 4] for i in range(8)]
 
 # === Subkey Generation ===
 def subkey_generation(mk):
+
     deltas = constant_generation()
     sk = [(mk[i % 8] + deltas[i]) & 0xFF for i in range(128)]
     return sk
@@ -111,13 +113,18 @@ BUFFER_SIZE = 5 * 1024 * 1024 * 1024   # 5GB
 
 def encrypt_data(fin, fout, key):
     total_written = 0
-         # Розбиваємо chunk на 8-байтні блоки
-    blocks = [chunk[i:i + 8] for i in range(0, len(chunk), 8)]
-    for block in blocks:
-        if len(block) < 8:
-            block = block.ljust(8, b'\0')
-        fout.write(encrypt_block(block, key))
-        total_written += 8
+    while True:
+        chunk = fin.read(BUFFER_SIZE)
+        if not chunk:
+            break
+
+        # Розбиваємо chunk на 8-байтні блоки
+        blocks = [chunk[i:i + 8] for i in range(0, len(chunk), 8)]
+        for block in blocks:
+            if len(block) < 8:
+                block = block.ljust(8, b'\0')
+            fout.write(encrypt_block(block, key))
+            total_written += 8
 
 def decrypt_data(fin, fout, key, original_size):
     total_written = 0
