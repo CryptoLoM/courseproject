@@ -25,7 +25,6 @@ def constant_generation():
 
 # === Whitening Key Generation ===
 def whitening_key_generation(mk):
-
     return [mk[i + 12] if i <= 3 else mk[i - 4] for i in range(8)]
 
 # === Subkey Generation ===
@@ -77,14 +76,11 @@ def encrypt_block(block: bytes, key: bytes) -> bytes:
     x = whitening(x, wk[:4])
     for i in range(32):
         x_new = x[:]
-        x_new[1] = (x[1] + (F1(x[0]) ^ rk[4 * i + 3])) & 0xFF # X1 ← X1 + (F1(X0) ⊕ SK4i+3)
+        x_new[1] = (x[1] + (F1(x[0]) ^ rk[4 * i + 3])) & 0xFF # X1 ← X1 ⊕ (F1(X0) + SK4i+3)
         x_new[3] = (x[3] ^ ((F0(x[2]) + rk[4 * i + 2]) & 0xFF)) & 0xFF  # X3 ← X3 ⊕ (F0(X2) + SK4i+2)
         x_new[5] = (x[5] + (F1(x[4]) ^ rk[4 * i + 1])) & 0xFF  # X5 ← X5 + (F1(X4) ⊕ SK4i+1)
         x_new[7] = (x[7] ^ ((F0(x[6]) + rk[4 * i + 0]) & 0xFF)) & 0xFF # X7 ← X7 ⊕ (F0(X6) + SK4i)
         x = x_new
-    x = whitening(x, wk[4:])
-    return bytes(x)
-
     x = whitening(x, wk[4:])
     return bytes(x)
 
@@ -118,7 +114,7 @@ def encrypt_data(fin, fout, key):
         if not chunk:
             break
 
-        # Розбиваємо chunk на 8-байтні блоки
+        # split the chunk into 8-byte blocks
         blocks = [chunk[i:i + 8] for i in range(0, len(chunk), 8)]
         for block in blocks:
             if len(block) < 8:
@@ -130,7 +126,7 @@ def decrypt_data(fin, fout, key, original_size):
     total_written = 0
     encrypted_data = fin.read()
 
-    # ➤ Перевірка на відповідність режиму ECB: довжина має бути кратна 8
+    # ➤ Check for ECB mode compliance: length must be a multiple of 8
     if len(encrypted_data) % 8 != 0:
         raise ValueError("Помилка: довжина зашифрованих даних не кратна 8 байтам (розмір блоку в режимі ECB).")
 
@@ -141,7 +137,7 @@ def decrypt_data(fin, fout, key, original_size):
             fout.write(decrypted_block)
             total_written += 8
         else:
-            # Запис лише необхідної кількості байт, якщо останній блок містить padding
+            # Write only the required number of bytes if the last block contains padding
             to_write = original_size - total_written
             fout.write(decrypted_block[:to_write])
             total_written += to_write
