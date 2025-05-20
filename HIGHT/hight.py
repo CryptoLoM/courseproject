@@ -69,6 +69,15 @@ def whitening_inverse(output_block, keys):
     x[6] ^= keys[3]
     return x
 
+def boxplus(a: int, b: int) -> int:
+
+    return (a + b) & 0xFF
+
+def boxminus(a: int, b: int) -> int:
+
+    return (a - b) & 0xFF
+
+
 def encrypt_block(block: bytes, key: bytes) -> bytes:
     wk = whitening_key_generation(key)
     rk = generate_round_keys(key)
@@ -76,10 +85,10 @@ def encrypt_block(block: bytes, key: bytes) -> bytes:
     x = whitening(x, wk[:4])
     for i in range(32):
         x_new = x[:]
-        x_new[1] = (x[1] + (F1(x[0]) ^ rk[4 * i + 3])) & 0xFF # X1 ← X1 + (F1(X0) ⊕ SK4i+3)
-        x_new[3] = (x[3] ^ ((F0(x[2]) + rk[4 * i + 2]) & 0xFF)) & 0xFF  # X3 ← X3 ⊕ (F0(X2) + SK4i+2)
-        x_new[5] = (x[5] + (F1(x[4]) ^ rk[4 * i + 1])) & 0xFF  # X5 ← X5 + (F1(X4) ⊕ SK4i+1)
-        x_new[7] = (x[7] ^ ((F0(x[6]) + rk[4 * i + 0]) & 0xFF)) & 0xFF # X7 ← X7 ⊕ (F0(X6) + SK4i)
+        x_new[1] = boxplus(x[1], F1(x[0]) ^ rk[4 * i + 3])  # X1 ← X1 + (F1(X0) ⊕ SK4i+3)
+        x_new[3] = x[3] ^ boxplus(F0(x[2]), rk[4 * i + 2])  # X3 ← X3 ⊕ (F0(X2) + SK4i+2)
+        x_new[5] = boxplus(x[5], F1(x[4]) ^ rk[4 * i + 1])  # X5 ← X5 + (F1(X4) ⊕ SK4i+1)
+        x_new[7] = x[7] ^ boxplus(F0(x[6]), rk[4 * i + 0])  # X7 ← X7 ⊕ (F0(X6) + SK4i)
         x = x_new
     x = whitening(x, wk[4:])
     return bytes(x)
@@ -91,14 +100,10 @@ def decrypt_block(block: bytes, key: bytes) -> bytes:
     x = whitening_inverse(x, wk[4:])
     for i in reversed(range(32)):
         x_new = x[:]
-        # X1 ← X1 - (F1(X0) ⊕ SK4i+3)
-        x_new[1] = (x[1] - (F1(x[0]) ^ rk[4 * i + 3])) & 0xFF
-        # X3 ← X3 ⊕ (F0(X2) + SK4i+2)
-        x_new[3] = (x[3] ^ ((F0(x[2]) + rk[4 * i + 2]) & 0xFF)) & 0xFF
-        # X5 ← X5 - (F1(X4) ⊕ SK4i+1)
-        x_new[5] = (x[5] - (F1(x[4]) ^ rk[4 * i + 1])) & 0xFF
-        # X7 ← X7 ⊕ (F0(X6) + SK4i)
-        x_new[7] = (x[7] ^ ((F0(x[6]) + rk[4 * i + 0]) & 0xFF)) & 0xFF
+        x_new[1] = boxminus(x[1], F1(x[0]) ^ rk[4 * i + 3])  # X1 ← X1 - (F1(X0) ⊕ SK4i+3)
+        x_new[3] = x[3] ^ boxplus(F0(x[2]), rk[4 * i + 2])  # X3 ← X3 ⊕ (F0(X2) + SK4i+2)
+        x_new[5] = boxminus(x[5], F1(x[4]) ^ rk[4 * i + 1])  # X5 ← X5 - (F1(X4) ⊕ SK4i+1)
+        x_new[7] = x[7] ^ boxplus(F0(x[6]), rk[4 * i + 0])  # X7 ← X7 ⊕ (F0(X6) + SK4i)
         x = x_new
 
     x = whitening_inverse(x, wk[:4])
