@@ -2,12 +2,6 @@ from hight import *
 
 
 if __name__ == "__main__":
-    key = bytes.fromhex("00112233445566778899aabbccddeeff")
-    plaintext = bytes.fromhex("0011223344556677")
-    ciphertext = encrypt_block(plaintext, key)
-
-    print(ciphertext.hex())
-
     key_path = "keys/keyy.bin"
     input_file = "files/input.txt"
     encrypted_file = "encrypted.bin"
@@ -35,6 +29,6 @@ if __name__ == "__main__":
     print(f"File decryption time with HIGHT cipher {decrypt_time:.2f} sec")
 
 #  or if u want with GUI then comment or delete upper code and uncomment this:
-#  run.gui()
+#  run_gui()
 
 
