@@ -2,12 +2,12 @@ from hight import *
 
 
 if __name__ == "__main__":
-    key_path = "keys/key.bin"
+    key_path = "keys/keyy.bin"
     input_file = "files/SCrypto.pdf"
     encrypted_file = "SCrypto.pdf.bin"
     decrypted_file = "decrypted_SCrypto.pdf"
 
-    # Генеруємо ключ, якщо ще не існує
+    # generate key if not exists
     if not os.path.exists(key_path):
         with open(key_path, "wb") as f:
             f.write(b"1234567890abcdef")
